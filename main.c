@@ -13,6 +13,8 @@ typedef struct{
     int Y;
 } Position;
 
+int MENU = 1;
+int DRAWNEDBG = 0;
 int GAME_OVER = -1;
 int END = 0;
 int SCORE = 0;
@@ -23,7 +25,7 @@ DIR 2 = DOWN
 DIR 3 = LEFT
 */
 int DIR = 1;
-float SPEED = 10;
+float CURRENT_SPEED = 10;
 
 int pX = 5, pY = 3;
 int snake_size = 1;
@@ -37,7 +39,8 @@ FOOD_TYPE = 1 -> +3 snake_length & score
 FOOD_TYPE = 2 -> +1 score only
 */
 
-#include "keyevents.c"
+#include "./keyevents.c"
+#include "./menu.c"
 
 void DrawScene(){
     for(int i = 0; i < HEIGHT; i++){
@@ -58,7 +61,7 @@ void DrawPlayer(){
     if(DIR == 3) mvprintw(pY, pX, "<");
     for(int i = 0; i < snake_size; i++)
         if(snake_body[i].X != 0 && snake_body[i].Y != 0)
-            mvprintw(snake_body[i].Y, snake_body[i].X, "-");
+            mvprintw(snake_body[i].Y, snake_body[i].X, "*");
 }
 void MovePlayer(){
     mvprintw(pY, pX, " ");
@@ -77,8 +80,8 @@ void MovePlayer(){
             break;
     }
 
-    if(DIR == 0 || DIR == 2) SPEED = 20;
-    else SPEED = 10;
+    if(DIR == 0 || DIR == 2) CURRENT_SPEED = SPEED*1.5;
+    else CURRENT_SPEED = SPEED;
 }
 int DetectCollison(){
     if(pY == 0 || pY == HEIGHT - 1) return 1;
@@ -150,60 +153,77 @@ int main(){
     init_pair(6, COLOR_GREEN, COLOR_WHITE);
     init_pair(7, COLOR_YELLOW, COLOR_WHITE);
 
-    BG();
-    refresh();
-    attron(COLOR_PAIR(2));
-    DrawScene();
-    refresh();
+
     while(!END){
 
+		if(MENU){
+			nodelay(stdscr, FALSE);
+			curs_set(1);
+			echo();
+			PrintMenu();
+			refresh();
+			DRAWNEDBG = 0;
+		}else{
 
-        if(GAME_OVER != 1){
-
-            if(GAME_OVER == -1) attron(COLOR_PAIR(3));
-            else attron(COLOR_PAIR(5));
-            DrawPlayer();
-            DrawScore(0, HEIGHT);
-            refresh();
-
-            switch(FOOD_TYPE){
-                case 0:
-                    attron(COLOR_PAIR(6));
-                    break;
-                case 1:
-                    attron(COLOR_PAIR(7));
-                    break;
-                case 2:
-                    attron(COLOR_PAIR(2));
-                    break;
-            }
-            DrawFood(foodPosition.X, foodPosition.Y);
-            refresh();
-
-            Position p;
-            p.X = pX;
-            p.Y = pY;
-            for(int i = 0; i < snake_size; i++) 
-                if(snake_body[i].X != 0 && snake_body[i].Y != 0)
-                    mvprintw(snake_body[i].Y, snake_body[i].X, " ");
-            for(int i = snake_size - 1; i > 0; i--){
-                Position p2;
-                p2 = snake_body[i];
-
-                snake_body[i] = p;
-
-                p = p2;
-            }
-        }
-
-        usleep(SPEED * 10000L);
-        
-        if(GAME_OVER == -1){
-            KeyEvents();
-            MovePlayer();
-        }
-        
-        if(DetectCollison() && GAME_OVER < 1) GAME_OVER++;
+			if(!DRAWNEDBG){
+				nodelay(stdscr, TRUE);
+				curs_set(0);
+				noecho();
+				BG();
+			    refresh();
+			    attron(COLOR_PAIR(2));
+			    DrawScene();
+			    refresh();
+				DRAWNEDBG = 1;
+			}
+	
+	        if(GAME_OVER != 1){
+	
+	            if(GAME_OVER == -1) attron(COLOR_PAIR(3));
+	            else attron(COLOR_PAIR(5));
+	            DrawPlayer();
+	            DrawScore(0, HEIGHT);
+	            refresh();
+	
+	            switch(FOOD_TYPE){
+	                case 0:
+	                    attron(COLOR_PAIR(6));
+	                    break;
+	                case 1:
+	                    attron(COLOR_PAIR(7));
+	                    break;
+	                case 2:
+	                    attron(COLOR_PAIR(2));
+	                    break;
+	            }
+	            DrawFood(foodPosition.X, foodPosition.Y);
+	            refresh();
+	
+	            Position p;
+	            p.X = pX;
+	            p.Y = pY;
+	            for(int i = 0; i < snake_size; i++) 
+	                if(snake_body[i].X != 0 && snake_body[i].Y != 0)
+	                    mvprintw(snake_body[i].Y, snake_body[i].X, " ");
+	            for(int i = snake_size - 1; i > 0; i--){
+	                Position p2;
+	                p2 = snake_body[i];
+	
+	                snake_body[i] = p;
+	
+	                p = p2;
+	            }
+	        }
+	
+	        usleep(CURRENT_SPEED * 10000L);
+	        
+	        if(GAME_OVER == -1){
+	            KeyEvents();
+	            MovePlayer();
+	        }
+	        
+	        if(DetectCollison() && GAME_OVER < 1) GAME_OVER++;
+		}
     }
 
     endwin();
