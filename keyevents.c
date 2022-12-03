@@ -31,6 +31,6 @@ void KeyEvents(){
                 if(DIR != 1) DIR = 3;
                 break;
         }
-        mvprintw(17, 2, "Key Pressed: %d", ch);
+        //mvprintw(17, 2, "Key Pressed: %d", ch);
     }
 }
