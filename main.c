@@ -40,6 +40,7 @@ FOOD_TYPE = 2 -> +1 score only
 */
 
 #include "./keyevents.c"
+#include "./ranking.c"
 #include "./menu.c"
 
 void DrawScene(){
@@ -134,6 +135,19 @@ void DrawScore(int x, int y){
     mvprintw(y, x, "+=== Score: %d ===+", SCORE);
 }
 
+void ResetSnake(){
+
+    for(int i = 0; i < snake_size + 1; i++){
+        snake_body[i].X = 0;
+        snake_body[i].Y = 0;
+    }
+    pX = 5;
+    pY = 2;
+    DIR = 1;
+    snake_size = 1;
+    SCORE = 0;
+}
+
 int main(){
     srand(time(NULL));
     initscr();
@@ -145,14 +159,18 @@ int main(){
     curs_set(0);
 
     start_color();
+    init_pair(11, COLOR_BLACK, COLOR_WHITE);
     init_pair(1, COLOR_CYAN, COLOR_WHITE);
     init_pair(2, COLOR_RED, COLOR_WHITE);
+    init_pair(12, COLOR_WHITE, COLOR_RED);
     init_pair(3, COLOR_BLUE, COLOR_WHITE);
     init_pair(4, COLOR_MAGENTA, COLOR_WHITE);
     init_pair(5, COLOR_BLACK, COLOR_WHITE);
     init_pair(6, COLOR_GREEN, COLOR_WHITE);
     init_pair(7, COLOR_YELLOW, COLOR_WHITE);
-
+    init_pair(8, COLOR_YELLOW, COLOR_BLACK);
+    init_pair(9, COLOR_GREEN, COLOR_BLACK);
+    init_pair(10, COLOR_BLUE, COLOR_BLACK);
 
     while(!END){
 
@@ -163,16 +181,20 @@ int main(){
 			PrintMenu();
 			refresh();
 			DRAWNEDBG = 0;
+            GAME_OVER = -1;
 		}else{
 
 			if(!DRAWNEDBG){
 				nodelay(stdscr, TRUE);
+                ResetSnake();
 				curs_set(0);
 				noecho();
 				BG();
 			    refresh();
+                attron(A_BOLD);
 			    attron(COLOR_PAIR(2));
 			    DrawScene();
+                attroff(A_BOLD);
 			    refresh();
 				DRAWNEDBG = 1;
 			}
@@ -181,7 +203,10 @@ int main(){
 	
 	            if(GAME_OVER == -1) attron(COLOR_PAIR(3));
 	            else attron(COLOR_PAIR(5));
+                attron(A_BOLD);
 	            DrawPlayer();
+                attroff(A_BOLD);
+
 	            DrawScore(0, HEIGHT);
 	            refresh();
 	
@@ -223,6 +248,27 @@ int main(){
 	        }
 	        
 	        if(DetectCollison() && GAME_OVER < 1) GAME_OVER++;
+
+            if(GAME_OVER == 1){
+
+                attron(COLOR_PAIR(5));
+	            DrawPlayer();
+
+                attron(A_BOLD);
+                attron(COLOR_PAIR(12));
+                mvprintw(HEIGHT/2, (WIDTH/2) - 6, " GAME OVER! ");
+
+                if(SCORE > 0)
+                    AddInRanking(WIDTH + 5, 0, SCORE, DIFFICULTY);
+
+                GetRanking(WIDTH + 1, 0);
+                refresh();
+
+                getchar();
+                MENU = 1;
+                CHOICE = 0;
+                clear();
+            }
 		}
     }
 

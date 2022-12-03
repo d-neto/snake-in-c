@@ -10,10 +10,14 @@ DIFFICULTY 2 -> HARD
 void PrintMenu(){
                         
 
-	mvprintw(0, 0, " _____            _           _____                  ");
-	mvprintw(1, 0, "|   __| ___  ___ | |_  ___   |   __| ___  _____  ___ ");
-	mvprintw(2, 0, "|__   ||   || .'|| '_|| -_|  |  |  || .'||     || -_|");
-	mvprintw(3, 0, "|_____||_|_||__,||_,_||___|  |_____||__,||_|_|_||___|");
+	attron(A_BOLD);
+	attron(COLOR_PAIR(9));
+	mvprintw(0, 1, " _____            _           _____                  ");
+	mvprintw(1, 1, "|   __| ___  ___ | |_  ___   |   __| ___  _____  ___ ");
+	mvprintw(2, 1, "|__   ||   || .'|| '_|| -_|  |  |  || .'||     || -_|");
+	mvprintw(3, 1, "|_____||_|_||__,||_,_||___|  |_____||__,||_|_|_||___|");
+	attroff(A_BOLD);
+	attroff(COLOR_PAIR(9));
 	
 	mvprintw(5, 2, "1 - Play");
 	mvprintw(6, 2, "2 - Ranking");
@@ -23,6 +27,8 @@ void PrintMenu(){
 
 	if(CHOICE == 0) scanw("%d", &CHOICE);
 	else mvprintw(9, 2, "Enter your choice: %d", CHOICE);
+	
+	int next = 0;
 
 	switch(CHOICE){
 		case 1:
@@ -49,7 +55,21 @@ void PrintMenu(){
 			clear();
 			break;
 		case 2:
-			
+			MENU = 0;
+			clear();
+			noecho();
+			curs_set(0);
+    		GetRanking(1, 0);
+			while(next == 0){
+				int ch = getch();
+				mvprintw(0, 0, "%d", ch);
+				refresh();
+				if(ch == 10) next = 1;
+			}
+			clear();
+			MENU = 1;
+			CHOICE = 0;
+			attroff(COLOR_PAIR(10));
 			break;
 		case 3:
 			nodelay(stdscr, TRUE);
