@@ -46,13 +46,17 @@ void GetRanking(int x, int y){
 
     Ranking RANKING[GetRankingSize()];
     RANKING[0].score = 0;
+    int removeIndex;
     for(int i = 0; i < GetRankingSize(); i++){
         RANKING[i] = RANKING_RAW[i];
+        removeIndex = -1;
         for(int k = 0; k < GetRankingSize(); k++)
-            if(RANKING_RAW[k].score > RANKING[i].score){
+            if(RANKING_RAW[k].score >= RANKING[i].score){
                 RANKING[i] = RANKING_RAW[k];
-                RANKING_RAW[k].score = -1000;
+                removeIndex = k;
             }
+
+        if(removeIndex != -1) RANKING_RAW[removeIndex].score = -1000;
 
         if(i < 3) attron(COLOR_PAIR(9));
         else attron(COLOR_PAIR(10));
