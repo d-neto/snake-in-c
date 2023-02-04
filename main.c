@@ -8,39 +8,87 @@
 #define HEIGHT 20
 #define MAX_LENGTH WIDTH * HEIGHT
 
-typedef struct{
-    int X;
-    int Y;
+#define TRUE 1
+#define FALSE 0
+
+typedef struct position{
+    int x;
+    int y;
 } Position;
+
+typedef struct controls{
+    int UP;
+    int RIGHT;
+    int DOWN;
+    int LEFT;
+} Control;
+
+typedef struct snake{
+    char * name;
+    int length;
+    int direction;
+    Control control;
+    Position body[MAX_LENGTH];
+    int is_dead;
+    int render;
+    int score;
+} Snake;
 
 int MENU = 1;
 int DRAWNEDBG = 0;
-int GAME_OVER = -1;
 int END = 0;
 int SCORE = 0;
-/*
-DIR 0 = UP
-DIR 1 = RIGHT
-DIR 2 = DOWN
-DIR 3 = LEFT
-*/
-int DIR = 1;
+
 float CURRENT_SPEED = 10;
 
-int pX = 5, pY = 3;
-int snake_size = 1;
-Position snake_body[MAX_LENGTH];
-
 Position foodPosition = {WIDTH/2, HEIGHT/2};
-int FOOD_TYPE = 0;
+
 /*
-FOOD_TYPE = 0 -> +1 snake_length & score
-FOOD_TYPE = 1 -> +3 snake_length & score
-FOOD_TYPE = 2 -> +1 score only
-*/
+    FOOD_TYPE = 0 -> +1 snake_length & score
+    FOOD_TYPE = 1 -> +3 snake_length & score
+    FOOD_TYPE = 2 -> +1 score only
+    */
+int FOOD_TYPE = 0;
+
+
+Snake AddPlayer(char * name, int length, int direction, Control keys, int x, int y, int dead){
+    Snake player;
+
+    player.name = name;
+    player.length = length;
+    player.direction = direction;
+
+    player.control = keys;
+
+    player.body->x = x;
+    player.body->y = y;
+
+    player.is_dead = dead;
+    player.render = TRUE;
+    player.score = 0;
+
+    return player;
+}
+
+#define PLAYERS_SIZE 2
+Snake players[PLAYERS_SIZE];
+int players_in_game = 0;
+
+void SetUpPlayers(){
+
+    //ARROW KEYS MAP
+    Control keys_1 = {259, 261, 258, 260};
+
+    //WASD KEYS MAP
+    Control keys_2 = {119, 100, 115, 97};
+
+    int player_2_set = (players_in_game == 1);
+
+    players[0] = AddPlayer("Player 1", 3, 1, keys_1, 5, 3, FALSE);
+    players[1] = AddPlayer("Player 2", 3, 1, keys_2, 5, HEIGHT - 4, player_2_set);
+}
 
 #include "./keyevents.c"
-#include "./ranking.c"
 #include "./menu.c"
 
 void DrawScene(){
@@ -55,73 +103,189 @@ void DrawScene(){
     mvprintw(HEIGHT - 1, 0, "+");
     mvprintw(HEIGHT - 1, WIDTH - 1, "+");
 }
-void DrawPlayer(){
-    if(DIR == 0) mvprintw(pY, pX, "^");
-    if(DIR == 1) mvprintw(pY, pX, ">");
-    if(DIR == 2) mvprintw(pY, pX, "v");
-    if(DIR == 3) mvprintw(pY, pX, "<");
-    for(int i = 0; i < snake_size; i++)
-        if(snake_body[i].X != 0 && snake_body[i].Y != 0)
-            mvprintw(snake_body[i].Y, snake_body[i].X, "*");
-}
-void MovePlayer(){
-    mvprintw(pY, pX, " ");
-    switch(DIR){
-        case 0:
-            pY -= 1;
-            break;
-        case 1:
-            pX += 1;
-            break;
-        case 2:
-            pY += 1;
-            break;
-        case 3:
-            pX -= 1;
-            break;
+
+void RenderPlayers(){
+
+    int i = 0;
+    for(i; i < players_in_game; i++){
+
+        if(!players[i].render) continue;
+
+        attron(COLOR_PAIR(3));
+        attron(A_BOLD);
+
+        if(players[i].is_dead){
+            attron(COLOR_PAIR(5));
+            attroff(A_BOLD);
+        }
+
+        if(players[i].direction == 0) mvprintw(players[i].body[0].y, players[i].body[0].x, "^");
+        if(players[i].direction == 1) mvprintw(players[i].body[0].y, players[i].body[0].x, ">");
+        if(players[i].direction == 2) mvprintw(players[i].body[0].y, players[i].body[0].x, "v");
+        if(players[i].direction == 3) mvprintw(players[i].body[0].y, players[i].body[0].x, "<");
+
+        int j = 1;
+        for(j; j < players[i].length; j++)
+            if(players[i].body[j].x != 0 && players[i].body[j].y != 0)
+                mvprintw(players[i].body[j].y, players[i].body[j].x, "*");
+
+        if(players[i].is_dead) players[i].render = FALSE;
+
+        attroff(COLOR_PAIR(3));
+        attroff(COLOR_PAIR(5));
+        attroff(A_BOLD);
     }
 
-    if(DIR == 0 || DIR == 2) CURRENT_SPEED = SPEED*1.5;
-    else CURRENT_SPEED = SPEED;
 }
-int DetectCollison(){
-    if(pY == 0 || pY == HEIGHT - 1) return 1;
-    if(pX == 0 || pX == WIDTH - 1) return 1;
 
-    for(int i = 0; i < snake_size; i++)
-        if(snake_body[i].Y == pY && snake_body[i].X == pX)
-            return 1;
+void GenerateSnakeBody(Snake * player){
+    Position p;
+    p.x = player->body[0].x;
+    p.y = player->body[0].y;
 
-    if(pX == foodPosition.X && pY == foodPosition.Y){
-        switch(FOOD_TYPE){
+    for(int i = 0; i < player->length; i++) 
+        if(player->body[i].x != 0 && player->body[i].y != 0)
+            mvprintw(player->body[i].y, player->body[i].x, " ");
+
+    for(int i = player->length - 1; i > 0; i--){
+        Position p2;
+        p2 = player->body[i];
+
+        player->body[i] = p;
+
+        p = p2;
+    }
+}
+
+void MovePlayers(){
+
+    int i = 0;
+    for(i; i < players_in_game; i++){
+
+        if(players[i].is_dead) continue;
+
+        GenerateSnakeBody(&players[i]);
+
+        mvprintw(players[i].body[0].y, players[i].body[0].x, " ");
+
+
+        switch(players[i].direction){
             case 0:
-                snake_size += 1;
-                SCORE += 1;
+                players[i].body[0].y -= 1;
                 break;
             case 1:
-                snake_size += 3;
-                SCORE += 3;
+                players[i].body[0].x += 1;
                 break;
             case 2:
-                SCORE += 2;
+                players[i].body[0].y += 1;
+                break;
+            case 3:
+                players[i].body[0].x -= 1;
                 break;
         }
-        //rand() % (max + 1 - min)) + min;
-        foodPosition.X = rand() % ((WIDTH - 3) + 1 - 3) + 3;
-        foodPosition.Y = rand() % ((HEIGHT - 3) + 1 - 3) + 3;
 
-        int random_number = rand() % 100;
-        if(random_number < 50) FOOD_TYPE = 0;
-        if(random_number >= 50 && random_number < 70) FOOD_TYPE = 1;
-        if(random_number >= 70 && random_number < 100) FOOD_TYPE = 2;
-        beep();
+    }
+
+}
+
+int DetectCollisonAll(){
+
+    int i = 0;
+    for(i; i < players_in_game; i++){
+        
+        if(players[i].is_dead) continue;
+
+        int k = 1;
+        for(k; k < players[i].length; k++){
+            if(players[i].is_dead) break;
+
+            if(players[i].body[k].x != 0 && players[i].body[k].y != 0){
+                int j = 0;
+                for(j; j < players_in_game; j++){
+
+                    if(players[i].is_dead) continue;
+                    if(players[j].is_dead) continue;
+
+                    if(players[i].body[k].x == players[j].body[0].x && players[i].body[k].y == players[j].body[0].y){
+                        players[j].is_dead = TRUE;
+                        beep();
+                        continue;
+                    }
+                }
+            }
+
+        }
+
+
+        if(players[i].body[0].x == 0 || players[i].body[0].x == WIDTH - 1){
+            players[i].is_dead = TRUE;
+            beep();
+            continue;
+        }
+        
+        if(players[i].body[0].y == 0 || players[i].body[0].y == HEIGHT - 1){
+            players[i].is_dead = TRUE;
+            beep();
+            continue;
+        }
+
+
+
+        if(players[i].body[0].x == foodPosition.x && players[i].body[0].y == foodPosition.y){
+            switch(FOOD_TYPE){
+                case 0:
+                    players[i].length += 1;
+                    players[i].score += 1;
+                    break;
+                case 1:
+                    players[i].length += 3;
+                    players[i].score += 3;
+                    break;
+                case 2:
+                    players[i].score += 2;
+                    break;
+            }
+
+
+            int j = 0;
+            for(j; j < players_in_game; j++){
+                //rand() % (max + 1 - min)) + min;
+                foodPosition.x = rand() % ((WIDTH - 3) + 1 - 3) + 3;
+                foodPosition.y = rand() % ((HEIGHT - 3) + 1 - 3) + 3;
+
+                int k = 1;
+                for(k; k < players[j].length; k++){
+                    if(foodPosition.x == players[j].body[k].x && foodPosition.x == players[j].body[k].x){
+                        j--;
+                        break;
+                    }
+                }
+            }
+
+            int random_number = rand() % 100;
+            if(random_number < 50) FOOD_TYPE = 0;
+            if(random_number >= 50 && random_number < 70) FOOD_TYPE = 1;
+            if(random_number >= 70 && random_number < 100) FOOD_TYPE = 2;
+            beep();
+        }
     }
 
     return 0;
 }
 
+int GameOver(){
+    int i = 0;
+    int dead_players = 0;
+    for(i; i < PLAYERS_SIZE; i++){
+        if(players[i].is_dead) dead_players++;
+    }
+
+    if(dead_players == PLAYERS_SIZE) return TRUE;
+    else return FALSE;
+}
+
 void DrawFood(int x, int y){
-    mvprintw(y, x, "0");
+    mvprintw(y, x, "@");
 }
 
 void BG(){
@@ -132,23 +296,38 @@ void BG(){
 }
 
 void DrawScore(int x, int y){
-    mvprintw(y, x, "+=== Score: %d ===+", SCORE);
+
+	attron(COLOR_PAIR(6));
+    mvprintw(y, x, "+===== Score =====+");
+	attroff(COLOR_PAIR(6));
+
+    int i = 0;
+
+    for(i; i < players_in_game; i++){
+        attron(A_BOLD);
+        if(!players[i].is_dead){
+            attron(COLOR_PAIR(9));
+            attron(A_BOLD);
+            mvprintw(y+i+1, x, "%s - %d pts.\n", players[i].name, players[i].score);
+            attroff(A_BOLD);
+	        attroff(COLOR_PAIR(9));
+        }
+        else{
+	        attron(COLOR_PAIR(13));
+            mvprintw(y+i+1, x, "%s - DEAD.\n", players[i].name);
+	        attroff(COLOR_PAIR(13));
+        }
+        attroff(A_BOLD);
+
+    }
 }
 
-void ResetSnake(){
-
-    for(int i = 0; i < snake_size + 1; i++){
-        snake_body[i].X = 0;
-        snake_body[i].Y = 0;
-    }
-    pX = 5;
-    pY = 2;
-    DIR = 1;
-    snake_size = 1;
-    SCORE = 0;
+void ResetGame(){
+    SetUpPlayers();
 }
 
 int main(){
+
     srand(time(NULL));
     initscr();
     cbreak();
@@ -159,10 +338,8 @@ int main(){
     curs_set(0);
 
     start_color();
-    init_pair(11, COLOR_BLACK, COLOR_WHITE);
     init_pair(1, COLOR_CYAN, COLOR_WHITE);
     init_pair(2, COLOR_RED, COLOR_WHITE);
-    init_pair(12, COLOR_WHITE, COLOR_RED);
     init_pair(3, COLOR_BLUE, COLOR_WHITE);
     init_pair(4, COLOR_MAGENTA, COLOR_WHITE);
     init_pair(5, COLOR_BLACK, COLOR_WHITE);
@@ -171,6 +348,9 @@ int main(){
     init_pair(8, COLOR_YELLOW, COLOR_BLACK);
     init_pair(9, COLOR_GREEN, COLOR_BLACK);
     init_pair(10, COLOR_BLUE, COLOR_BLACK);
+    init_pair(11, COLOR_BLACK, COLOR_WHITE);
+    init_pair(12, COLOR_WHITE, COLOR_RED);
+    init_pair(13, COLOR_RED, COLOR_BLACK);
 
     while(!END){
 
@@ -180,13 +360,12 @@ int main(){
 			echo();
 			PrintMenu();
 			refresh();
-			DRAWNEDBG = 0;
-            GAME_OVER = -1;
+			DRAWNEDBG = FALSE;
 		}else{
 
 			if(!DRAWNEDBG){
 				nodelay(stdscr, TRUE);
-                ResetSnake();
+                ResetGame();
 				curs_set(0);
 				noecho();
 				BG();
@@ -196,18 +375,17 @@ int main(){
 			    DrawScene();
                 attroff(A_BOLD);
 			    refresh();
-				DRAWNEDBG = 1;
+				DRAWNEDBG = TRUE;
 			}
 	
-	        if(GAME_OVER != 1){
+	        if(!GameOver()){
 	
-	            if(GAME_OVER == -1) attron(COLOR_PAIR(3));
-	            else attron(COLOR_PAIR(5));
+	            attron(COLOR_PAIR(3));
                 attron(A_BOLD);
-	            DrawPlayer();
+	            RenderPlayers();
                 attroff(A_BOLD);
 
-	            DrawScore(0, HEIGHT);
+	            DrawScore(WIDTH + 2, 0);
 	            refresh();
 	
 	            switch(FOOD_TYPE){
@@ -221,51 +399,39 @@ int main(){
 	                    attron(COLOR_PAIR(2));
 	                    break;
 	            }
-	            DrawFood(foodPosition.X, foodPosition.Y);
+	            DrawFood(foodPosition.x, foodPosition.y);
 	            refresh();
-	
-	            Position p;
-	            p.X = pX;
-	            p.Y = pY;
-	            for(int i = 0; i < snake_size; i++) 
-	                if(snake_body[i].X != 0 && snake_body[i].Y != 0)
-	                    mvprintw(snake_body[i].Y, snake_body[i].X, " ");
-	            for(int i = snake_size - 1; i > 0; i--){
-	                Position p2;
-	                p2 = snake_body[i];
-	
-	                snake_body[i] = p;
-	
-	                p = p2;
-	            }
 	        }
 	
 	        usleep(CURRENT_SPEED * 10000L);
 	        
-	        if(GAME_OVER == -1){
+	        if(!GameOver()){
 	            KeyEvents();
-	            MovePlayer();
+	            MovePlayers();
 	        }
 	        
-	        if(DetectCollison() && GAME_OVER < 1) GAME_OVER++;
+	        DetectCollisonAll();
 
-            if(GAME_OVER == 1){
-
+            if(GameOver()){
                 attron(COLOR_PAIR(5));
-	            DrawPlayer();
+	            RenderPlayers();
 
                 attron(A_BOLD);
                 attron(COLOR_PAIR(12));
                 mvprintw(HEIGHT/2, (WIDTH/2) - 6, " GAME OVER! ");
+                attroff(A_BOLD);
+                attroff(COLOR_PAIR(12));
 
-                if(SCORE > 0)
-                    AddInRanking(WIDTH + 5, 0, SCORE, DIFFICULTY);
+                attron(COLOR_PAIR(1));
+                mvprintw(HEIGHT/2 + 2, (WIDTH/2) - 12, " Press ENTER to return ");
+                attroff(COLOR_PAIR(1));
 
-                GetRanking(WIDTH + 1, 0);
                 refresh();
+                usleep(100 * 10000L);
 
-                getchar();
-                MENU = 1;
+			    nodelay(stdscr, FALSE);
+                while(getchar() != 13);
+                MENU = TRUE;
                 CHOICE = 0;
                 clear();
             }

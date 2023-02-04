@@ -1,7 +1,9 @@
-#define UP_KEY 259
-#define DOWN_KEY 258
-#define RIGHT_KEY 261
-#define LEFT_KEY 260
+/*
+    DIR 0 = UP
+    DIR 1 = RIGHT
+    DIR 2 = DOWN
+    DIR 3 = LEFT
+    */
 
 int kbhit(void)
 {
@@ -17,20 +19,28 @@ int kbhit(void)
 void KeyEvents(){
     if(kbhit()){
         int ch = getch();
-        switch(ch){
-            case UP_KEY:
-                if(DIR != 2) DIR = 0;
-                break;
-            case RIGHT_KEY:
-                if(DIR != 3) DIR = 1;
-                break;
-            case DOWN_KEY:
-                if(DIR != 0) DIR = 2;
-                break;
-            case LEFT_KEY:
-                if(DIR != 1) DIR = 3;
-                break;
+
+        int i = 0;
+        for(i; i < PLAYERS_SIZE; i++){
+
+            if(players[i].is_dead) continue;
+
+            if(ch == players[i].control.UP)
+                if(players[i].direction != 2) players[i].direction = 0;
+
+            if(ch == players[i].control.RIGHT)
+                if(players[i].direction != 3) players[i].direction = 1;
+
+            if(ch == players[i].control.DOWN)
+                if(players[i].direction != 0) players[i].direction = 2;
+
+            if(ch == players[i].control.LEFT)
+                if(players[i].direction != 1) players[i].direction = 3;
+
         }
-        //mvprintw(17, 2, "Key Pressed: %d", ch);
+
+        /* 
+            LOG KEYS 
+        mvprintw(17, 2, "Key Pressed: %d", ch); */
     }
 }
