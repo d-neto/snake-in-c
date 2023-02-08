@@ -217,18 +217,36 @@ int DetectCollisonAll(){
         }
 
 
-        if(players[i].body[0].x == 0 || players[i].body[0].x == WIDTH - 1){
-            players[i].is_dead = TRUE;
-            beep();
-            continue;
-        }
-        
-        if(players[i].body[0].y == 0 || players[i].body[0].y == HEIGHT - 1){
-            players[i].is_dead = TRUE;
-            beep();
-            continue;
-        }
+        if(DIFFICULTY != 0){
+            if(players[i].body[0].x == 0 || players[i].body[0].x == WIDTH - 1){
+                players[i].is_dead = TRUE;
+                beep();
+                continue;
+            }
+            
+            if(players[i].body[0].y == 0 || players[i].body[0].y == HEIGHT - 1){
+                players[i].is_dead = TRUE;
+                beep();
+                continue;
+            }
+        }else{
+            if(players[i].body[0].x == 0){
+                players[i].body[0].x = WIDTH - 2;
+            }
+            
+            if(players[i].body[0].y == 0){
+                players[i].body[0].y = HEIGHT - 2;
+            }
 
+
+            if(players[i].body[0].x == WIDTH - 1){
+                players[i].body[0].x = 1;
+            }
+            
+            if(players[i].body[0].y == HEIGHT - 1){
+                players[i].body[0].y = 1;
+            }
+        }
 
 
         if(players[i].body[0].x == foodPosition.x && players[i].body[0].y == foodPosition.y){
@@ -402,8 +420,8 @@ int main(){
 	            DrawFood(foodPosition.x, foodPosition.y);
 	            refresh();
 	        }
-	
-	        usleep(CURRENT_SPEED * 10000L);
+
+            usleep(CURRENT_SPEED * 10000L);
 	        
 	        if(!GameOver()){
 	            KeyEvents();
@@ -427,7 +445,6 @@ int main(){
                 attroff(COLOR_PAIR(1));
 
                 refresh();
-                usleep(100 * 10000L);
 
 			    nodelay(stdscr, FALSE);
                 while(getchar() != 13);

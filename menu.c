@@ -284,7 +284,7 @@ int PrintMenu(){
 
 	switch(DIFFICULTY){
 		case 0:
-			CURRENT_SPEED = 16;
+			CURRENT_SPEED = 10;
 			break;
 		case 1:
 			CURRENT_SPEED = 10;
